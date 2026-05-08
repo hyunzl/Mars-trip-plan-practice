@@ -7,6 +7,7 @@ import com.example.tripplanpractice.auth.dto.response.LoginResponseDto;
 import com.example.tripplanpractice.auth.dto.response.SignupResponseDto;
 import com.example.tripplanpractice.auth.dto.response.TokenReissueResponseDto;
 import com.example.tripplanpractice.auth.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,17 +22,17 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<SignupResponseDto> save(@RequestBody SignupRequestDto signupRequestDto) {
+    public ResponseEntity<SignupResponseDto> save(@Valid @RequestBody SignupRequestDto signupRequestDto) {
         return ResponseEntity.ok(authService.save(signupRequestDto));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto loginRequestDto) {
+    public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto loginRequestDto) {
         return ResponseEntity.ok(authService.login(loginRequestDto));
     }
 
     @PostMapping("/reissue")
-    public ResponseEntity<TokenReissueResponseDto> reissue(@RequestBody TokenReissueRequestDto tokenReissueRequestDto) {
+    public ResponseEntity<TokenReissueResponseDto> reissue(@Valid @RequestBody TokenReissueRequestDto tokenReissueRequestDto) {
         return ResponseEntity.ok(authService.reissue(tokenReissueRequestDto));
     }
 }

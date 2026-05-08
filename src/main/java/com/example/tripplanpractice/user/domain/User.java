@@ -1,5 +1,8 @@
 package com.example.tripplanpractice.user.domain;
 
+import com.example.tripplanpractice.global.entity.BaseEntity;
+import com.example.tripplanpractice.global.enums.Role;
+import com.example.tripplanpractice.global.enums.UseYnEnum;
 import com.example.tripplanpractice.user.enums.Gender;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,7 +19,7 @@ import java.time.LocalDateTime;
 @Builder
 @Entity
 @Table(name = "tb_user")
-public class User {
+public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
@@ -28,8 +31,12 @@ public class User {
     @Column(name = "password_hash", length = 255, nullable = false)
     private String passwordHash;
 
-    @Column(name = "email", length = 255, nullable = false)
+    @Column(name = "email", length = 255, nullable = false, unique = true)
     private String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role;
 
     @Column(name = "name", length = 10, nullable = false)
     private String name;
@@ -47,14 +54,17 @@ public class User {
     @Column(name = "country_code", length = 20, nullable = false)
     private String countryCode;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "privacy_agree", nullable = false)
-    private boolean privacyAgree;
+    private UseYnEnum privacyAgree;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "marketing_agree", nullable = false)
-    private boolean marketingAgree;
+    private UseYnEnum marketingAgree;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "night_marketing_agree", nullable = false)
-    private boolean nightMarketingAgree;
+    private UseYnEnum nightMarketingAgree;
 
     @Column(name = "refresh_token", length = 255)
     private String refreshToken;

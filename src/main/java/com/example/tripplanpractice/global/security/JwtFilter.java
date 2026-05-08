@@ -11,6 +11,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * JWT 인증 필터
+ *
+ * * 클라이언트 요청 헤더에 포함된 JWT를 검증하고,
+ * 유효한 토큰일 경우 Spring Security 인증 객체를 등록한다.
+ *
+ * * OncePerRequestFilter를 상속받아
+ * 하나의 요청당 한 번만 필터가 실행되도록 구성한다.
+ */
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
@@ -32,7 +41,11 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // 요청 헤더에서 "Bearer " 접두사 제거해 jwt 추출
+    /**
+     * Authorization 헤더에서 JWT 추출
+     *
+     * * "Bearer " 접두사를 제거한 실제 JWT 문자열을 반환한다.
+     */
     private String resolveToken(HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
