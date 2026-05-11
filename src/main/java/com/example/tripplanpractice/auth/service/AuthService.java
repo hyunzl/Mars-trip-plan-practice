@@ -136,15 +136,13 @@ public class AuthService {
      * @return 인증 메일 발송 대상자 로그인 아이디, 이메일
      * @throws BusinessException 회원 정보가 존재하지 않거나 메일 발송에 실패한 경우
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public PasswordEmailResponseDto sendPasswordResetEmail(PasswordEmailRequestDto dto) {
 
         userRepository.findByLoginIdAndEmail(dto.getLoginId(), dto.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         String code = String.valueOf((int)(Math.random() * 900000) + 100000);
-
-        verificationCodes.put(dto.getEmail(), code);
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(dto.getEmail());
@@ -156,6 +154,8 @@ public class AuthService {
         } catch (Exception e) {
             throw new BusinessException(ErrorCode.EMAIL_SEND_FAIL);
         }
+
+        verificationCodes.put(dto.getEmail(), code);
 
         return new PasswordEmailResponseDto(dto.getLoginId(), dto.getEmail());
     }
