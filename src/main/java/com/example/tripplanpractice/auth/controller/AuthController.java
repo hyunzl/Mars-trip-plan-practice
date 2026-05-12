@@ -1,8 +1,10 @@
 package com.example.tripplanpractice.auth.controller;
 
 import com.example.tripplanpractice.auth.dto.request.LoginRequestDto;
+import com.example.tripplanpractice.auth.dto.request.PasswordEmailRequestDto;
 import com.example.tripplanpractice.auth.dto.request.SignupRequestDto;
 import com.example.tripplanpractice.auth.dto.request.TokenReissueRequestDto;
+import com.example.tripplanpractice.auth.dto.response.PasswordEmailResponseDto;
 import com.example.tripplanpractice.auth.dto.response.LoginResponseDto;
 import com.example.tripplanpractice.auth.dto.response.SignupResponseDto;
 import com.example.tripplanpractice.auth.dto.response.TokenReissueResponseDto;
@@ -34,5 +36,10 @@ public class AuthController {
     @PostMapping("/reissue")
     public ResponseEntity<TokenReissueResponseDto> reissue(@Valid @RequestBody TokenReissueRequestDto tokenReissueRequestDto) {
         return ResponseEntity.ok(authService.reissue(tokenReissueRequestDto));
+    }
+
+    @PostMapping("/password/send-verify")
+    public ResponseEntity<PasswordEmailResponseDto> sendVerificationCode(@Valid @RequestBody PasswordEmailRequestDto passwordEmailRequestDto) {
+        return ResponseEntity.ok(authService.sendPasswordResetEmail(passwordEmailRequestDto));
     }
 }
