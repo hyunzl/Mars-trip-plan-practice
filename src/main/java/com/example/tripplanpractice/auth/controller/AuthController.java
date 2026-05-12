@@ -1,13 +1,7 @@
 package com.example.tripplanpractice.auth.controller;
 
-import com.example.tripplanpractice.auth.dto.request.LoginRequestDto;
-import com.example.tripplanpractice.auth.dto.request.PasswordEmailRequestDto;
-import com.example.tripplanpractice.auth.dto.request.SignupRequestDto;
-import com.example.tripplanpractice.auth.dto.request.TokenReissueRequestDto;
-import com.example.tripplanpractice.auth.dto.response.PasswordEmailResponseDto;
-import com.example.tripplanpractice.auth.dto.response.LoginResponseDto;
-import com.example.tripplanpractice.auth.dto.response.SignupResponseDto;
-import com.example.tripplanpractice.auth.dto.response.TokenReissueResponseDto;
+import com.example.tripplanpractice.auth.dto.request.*;
+import com.example.tripplanpractice.auth.dto.response.*;
 import com.example.tripplanpractice.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +34,16 @@ public class AuthController {
 
     @PostMapping("/password/send-verify")
     public ResponseEntity<PasswordEmailResponseDto> sendVerificationCode(@Valid @RequestBody PasswordEmailRequestDto passwordEmailRequestDto) {
-        return ResponseEntity.ok(authService.sendPasswordResetEmail(passwordEmailRequestDto));
+        return ResponseEntity.ok(authService.sendPasswordResetCode(passwordEmailRequestDto));
+    }
+
+    @PostMapping("/password/verify-code")
+    public ResponseEntity<PasswordResetResponseDto> verifyPasswordResetCode(@Valid @RequestBody PasswordResetRequestDto passwordResetRequestDto) {
+        return ResponseEntity.ok(authService.verifyPasswordResetCode(passwordResetRequestDto));
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<PasswordResetResponseDto> resetPassword(@Valid @RequestBody PasswordResetRequestDto passwordResetRequestDto) {
+        return ResponseEntity.ok(authService.issueTempPassword(passwordResetRequestDto));
     }
 }

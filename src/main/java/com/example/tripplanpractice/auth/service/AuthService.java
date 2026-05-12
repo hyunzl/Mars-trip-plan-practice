@@ -1,13 +1,7 @@
 package com.example.tripplanpractice.auth.service;
 
-import com.example.tripplanpractice.auth.dto.request.PasswordEmailRequestDto;
-import com.example.tripplanpractice.auth.dto.request.LoginRequestDto;
-import com.example.tripplanpractice.auth.dto.request.SignupRequestDto;
-import com.example.tripplanpractice.auth.dto.request.TokenReissueRequestDto;
-import com.example.tripplanpractice.auth.dto.response.PasswordEmailResponseDto;
-import com.example.tripplanpractice.auth.dto.response.LoginResponseDto;
-import com.example.tripplanpractice.auth.dto.response.SignupResponseDto;
-import com.example.tripplanpractice.auth.dto.response.TokenReissueResponseDto;
+import com.example.tripplanpractice.auth.dto.request.*;
+import com.example.tripplanpractice.auth.dto.response.*;
 import com.example.tripplanpractice.global.exception.BusinessException;
 import com.example.tripplanpractice.global.enums.ErrorCode;
 import com.example.tripplanpractice.global.security.JwtTokenProvider;
@@ -20,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +29,7 @@ public class AuthService {
     private final JavaMailSender mailSender;
     // 동시에 여러 사용자가 접근할 수 있기 때문에 ConcurrentHashMap 사용
     private final Map<String, String> verificationCodes = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> verificationStatus = new ConcurrentHashMap<>();
 
     /**
      * 회원가입
@@ -132,12 +128,12 @@ public class AuthService {
      *
      * * 이메일 발송 실패 시 EMAIL_SEND_FAIL 처리
      *
-     * @param dto 비밀번호 재설정 요청 정보 (loginId, email)
-     * @return 인증 메일 발송 대상자 로그인 아이디, 이메일
+     * @param dto 비밀번호 재설정 요청 정보
+     * @return 인증 메일 발송 사용자 정보
      * @throws BusinessException 회원 정보가 존재하지 않거나 메일 발송에 실패한 경우
      */
     @Transactional(readOnly = true)
-    public PasswordEmailResponseDto sendPasswordResetEmail(PasswordEmailRequestDto dto) {
+    public PasswordEmailResponseDto sendPasswordResetCode(PasswordEmailRequestDto dto) {
 
         userRepository.findByLoginIdAndEmail(dto.getLoginId(), dto.getEmail())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -158,5 +154,101 @@ public class AuthService {
         verificationCodes.put(dto.getEmail(), code);
 
         return new PasswordEmailResponseDto(dto.getLoginId(), dto.getEmail());
+    }
+
+    /**
+     * 사용자가 입력한 인증번호 검증
+     *
+     * * 저장된 인증번호와 사용자가 입력한 인증번호를 비교하고,
+     * 인증 성공 시 임시 비밀번호 발급 가능 상태로 변경합니다.
+     *
+     * @param dto 비밀번호 재설정 인증 요청 정보
+     * @return 인증 완료된 사용자 정보
+     * @throws BusinessException 인증번호가 일치하지 않거나 회원이 존재하지 않는 경우
+     */
+    @Transactional
+    public PasswordResetResponseDto verifyPasswordResetCode(PasswordResetRequestDto dto) {
+
+        // 인증번호 조회
+        String savedCode = verificationCodes.get(dto.getEmail());
+
+        if (savedCode == null || !savedCode.equals(dto.getVerifyCode())) {
+            throw new BusinessException(ErrorCode.INVALID_VERIFICATION_CODE);
+        }
+
+        userRepository.findByLoginIdAndEmail(dto.getLoginId(), dto.getEmail())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 인증 완료 상태 저장
+        verificationStatus.put(dto.getEmail(), true);
+
+        // 사용 완료된 인증번호 제거
+        verificationCodes.remove(dto.getEmail());
+
+        return new PasswordResetResponseDto(dto.getLoginId(), dto.getEmail());
+    }
+
+    /**
+     * 인증 완료된 사용자에게 임시 비밀번호 발급
+     *
+     * * 인증 완료 여부를 확인한 뒤 랜덤 임시 비밀번호를 생성하여 이메일로 발송하고
+     * 암호화 후 사용자 비밀번호를 변경합니다.
+     *
+     * @param dto 임시 비밀번호 발급 요청 정보
+     * @return 임시 비밀번호 발급 완료 사용자 정보
+     * @throws BusinessException 인증이 완료되지 않았거나 메일 발송에 실패한 경우
+     */
+    @Transactional
+    public PasswordResetResponseDto issueTempPassword(PasswordResetRequestDto dto) {
+
+        // 인증 완료 여부 조회
+        Boolean isVerified = verificationStatus.get(dto.getEmail());
+
+        if (!Boolean.TRUE.equals(isVerified)) {
+            throw new BusinessException(ErrorCode.INVALID_VERIFICATION_CODE);
+        }
+
+        User user = userRepository.findByLoginIdAndEmail(dto.getLoginId(), dto.getEmail())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 임비 비밀번호 생성
+        String tempPassword = generateTempPassword();
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(dto.getEmail());
+        message.setSubject("임시 비밀번호 발급");
+        message.setText("임시 비밀번호: " + tempPassword);
+
+        try {
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.EMAIL_SEND_FAIL);
+        }
+
+        // 임시 비밀번호 해시처리 후 사용자 비밀번호 변경 저장
+        user.updatePassword(passwordEncoder.encode(tempPassword));
+
+        // 인증 완료 상태 제거
+        verificationStatus.remove(dto.getEmail());
+
+        return new PasswordResetResponseDto(dto.getLoginId(), dto.getEmail());
+    }
+
+    private String generateTempPassword() {
+
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@$!%*#?&";
+        String specialChars = "@$!%*#?&";
+
+        SecureRandom random = new SecureRandom();
+        StringBuilder password = new StringBuilder();
+
+        password.append(specialChars.charAt(random.nextInt(specialChars.length())));
+
+        for (int i = 1; i < 10; i++) {
+            int index = random.nextInt(chars.length());
+            password.append(chars.charAt(index));
+        }
+
+        return password.toString();
     }
 }
