@@ -48,9 +48,8 @@ public class Notification extends BaseEntity {
     private LocalDateTime readAt;
 
     @Builder.Default
-    @Enumerated(EnumType.STRING)
     @Column(name = "is_deleted", nullable = false)
-    private UseYnEnum isDeleted = UseYnEnum.N;
+    private boolean isDeleted = false;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
@@ -58,4 +57,9 @@ public class Notification extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    public void markAsRead() {
+        this.isRead = UseYnEnum.Y;
+        this.readAt = LocalDateTime.now();
+    }
 }

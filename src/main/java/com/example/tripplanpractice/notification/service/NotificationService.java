@@ -6,6 +6,7 @@ import com.example.tripplanpractice.global.exception.BusinessException;
 import com.example.tripplanpractice.notification.domain.Notification;
 import com.example.tripplanpractice.notification.domain.UserFcmToken;
 import com.example.tripplanpractice.notification.dto.request.WeatherNotificationRequestDto;
+import com.example.tripplanpractice.notification.dto.response.NotificationResponseDto;
 import com.example.tripplanpractice.notification.enums.NotificationType;
 import com.example.tripplanpractice.notification.repository.NotificationRepository;
 import com.example.tripplanpractice.notification.repository.UserFcmTokenRepository;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -103,5 +105,26 @@ public class NotificationService {
     private boolean isNightTime() {
         LocalTime now = LocalTime.now();
         return now.isAfter(LocalTime.of(21, 0)) || now.isBefore(LocalTime.of(8, 0));
+    }
+
+    @Transactional
+    public List<NotificationResponseDto> getNotifications(String loginId) {
+
+        User user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        List<Notification> notifications = notificationRepository.findByUserAndIsDeletedFalseOrderBySendAtDesc(user);
+
+        notifications.forEach(Notification::markAsRead);
+
+        return notifications.stream().map(NotificationResponseDto::new).toList();
+    }
+
+    public boolean hasUnreadNotification(String loginId) {
+
+        User user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return notificationRepository.existsByUserAndIsReadAndIsDeletedFalse(user, UseYnEnum.N);
     }
 }
