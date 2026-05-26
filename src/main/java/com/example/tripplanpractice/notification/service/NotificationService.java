@@ -6,6 +6,7 @@ import com.example.tripplanpractice.global.exception.BusinessException;
 import com.example.tripplanpractice.notification.domain.Notification;
 import com.example.tripplanpractice.notification.domain.UserFcmToken;
 import com.example.tripplanpractice.notification.dto.request.WeatherNotificationRequestDto;
+import com.example.tripplanpractice.notification.dto.response.NotificationResponseDto;
 import com.example.tripplanpractice.notification.enums.NotificationType;
 import com.example.tripplanpractice.notification.repository.NotificationRepository;
 import com.example.tripplanpractice.notification.repository.UserFcmTokenRepository;
@@ -16,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -103,5 +105,50 @@ public class NotificationService {
     private boolean isNightTime() {
         LocalTime now = LocalTime.now();
         return now.isAfter(LocalTime.of(21, 0)) || now.isBefore(LocalTime.of(8, 0));
+    }
+
+    /**
+     * 알림 목록 조회
+     *
+     * * 조회된 알림은 최신순으로 반환하며
+     * 사용자가 알림 목록을 확인한 것으로 간주하기 때문에
+     * 조회 시 unread 상태를 read 상태로 변경합니다.
+     *
+     * @param loginId 로그인한 사용자 ID
+     * @return 알림 응답 DTO 리스트
+     * @throws BusinessException 존재하지 않는 사용자일 경우
+     */
+    @Transactional
+    public List<NotificationResponseDto> getNotifications(String loginId) {
+
+        User user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 삭제되지 않은 알림만 최신순으로 조회
+        List<Notification> notifications = notificationRepository.findByUserAndIsDeletedFalseOrderBySendAtDesc(user);
+
+        // 알림 목록을 조회한 시점을 읽음 처리 기준으로 사용
+        notifications.forEach(Notification::markAsRead);
+
+        // Entity → Response DTO 변환 후 반환
+        return notifications.stream().map(NotificationResponseDto::new).toList();
+    }
+
+    /**
+     * 읽지 않은 알림 존재 여부 조회
+     *
+     * 알림 목록 전체를 조회하지 않고 exists 쿼리를 사용해
+     * unread 알림 존재 여부만 빠르게 확인합니다.
+     *
+     * @param loginId 로그인한 사용자 ID
+     * @return 읽지 않은 알림 존재 여부
+     * @throws BusinessException 존재하지 않는 사용자일 경우
+     * */
+    public boolean hasUnreadNotification(String loginId) {
+
+        User user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return notificationRepository.existsByUserAndIsReadAndIsDeletedFalse(user, UseYnEnum.N);
     }
 }

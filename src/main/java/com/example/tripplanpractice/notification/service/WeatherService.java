@@ -1,6 +1,7 @@
 package com.example.tripplanpractice.notification.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class WeatherService {
@@ -53,6 +55,7 @@ public class WeatherService {
 
             return new WeatherInfo(minTemp, maxTemp, convertWeather(weatherMain));
         } catch (Exception e) {
+            log.error("날씨 API 호출 실패: {}", e.getMessage());
             return new WeatherInfo(0, 0, "알 수 없음");
         }
 
