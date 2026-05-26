@@ -16,6 +16,10 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  firebase:
+    service-account:
+      path: firebase-service-account.json
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -34,3 +38,7 @@ jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: ${JWT_ACCESS_EXPIRATION}
   refresh-token-expiration: ${JWT_REFRESH_EXPIRATION}
+
+openweather:
+  api:
+    key: ${OPENWEATHER_API_KEY}
